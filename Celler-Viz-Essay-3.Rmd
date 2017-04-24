@@ -74,6 +74,7 @@ GA_tokenized %>%
   count(word) %>%
   with(wordcloud(word, n, max.words = 100))
 ```
+
 ```{r, echo=FALSE}
 GA_counts <- GA_tokenized %>% 
   count(filename, word) %>% 
