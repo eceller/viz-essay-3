@@ -1,0 +1,103 @@
+---
+title: "Viz-Essay-3"
+author: "Eric Celler"
+date: "4/19/2017"
+output: html_document
+---
+
+```{r, include=FALSE}
+library(tidyverse)
+library(stringr)
+
+# devtools::install_github("lmullen/WPAnarratives")
+library(WPAnarratives)
+
+# devtools::install_github("ropensci/tokenizers")
+library(tokenizers)
+
+# install.packages("tidytext")
+library(tidytext)
+
+# install.packages("topicmodels")
+library(topicmodels)
+
+library(dplyr)
+
+library(ggplot2)
+
+library(wordcloud)
+
+library(tm)
+```
+
+```{r, echo=FALSE}
+GA_narratives <- wpa_narratives %>%
+  filter(interview_state == "GA")
+```
+
+```{r, echo=FALSE}
+GA_tokenized <- GA_narratives %>% 
+  select(filename, text) %>% 
+  unnest_tokens(word, text, token = "words")
+```
+
+```{r, echo=FALSE}
+word_counts <- GA_tokenized %>% 
+  count(word, sort = TRUE)
+```
+
+```{r, echo=FALSE, display=FALSE}
+before <- nrow(GA_tokenized)
+
+words_to_drop <- word_counts %>% 
+  filter(n<=2 | n>=50000)
+
+nrow(words_to_drop) / nrow(word_counts)
+
+GA_tokenized <- GA_tokenized %>% 
+  anti_join(words_to_drop, by = "word") %>% 
+  anti_join(stop_words, by = "word")
+
+after <- nrow(GA_tokenized)
+
+before - after
+after / before
+```
+When attempting to get a micro view of a particular period in history, it is often useful to begin with at the macro level.  By viewing a period or event from above, one is able to gain a clearer sense of potential themes or ideas that are relevant to the story one is pursuing.  Furthermore, and perhaps more useful, taking the macro view can often provide assistance in confirming what we might expect to see based on common, traditional, or popular narratives.  In this case, the dataset WPAnarratives has been subsetted to simply include the narratives of those former slaves who were living in Georgia while the interviews were taking place.  By applying text analysis to the subsetted dataset, we're able to see certain potential themes emerge.  For instance, within the subset GA_narratives, we are able to glean an argument confirming some of the more common and expected aspects of slave culture in the American south before and during the Civil War: that is, slave culture in the American south appears to be characterized by a few things: race, family, and power.
+
+Slave culture in the American south was not simply comrised of units of labor that were bought and sold into bondage.  Slave culture, as with any other culture, had its own life, its own language, its own dynamics, and its own concerns with which it had to deal.  As we can see from the wordcloud below, there are certain terms that were employed in the narratives that begin to reveal a portrait of slave culture in the south.  Race relations can be seen with the use of the terms "white" and "nigger", while the power dynamic is illustrated by "marster" and "plantation". 
+
+However, race and power were not the only defining characteristics of slave culture.  A more intimate picture comes to light when we take note of the terms "aunt", "uncle", "wedding", "folkses", "church", "children", and "freedom".  From this we can extrapolate a story of people concerned with the more elemental stuff of life with which all other people concern themselves.  Of course, this is not entirely surprising, however, as mentioned earlier, text analysis is helpful in moving traditional assumptions and understandings of historical narratives toward concrete confirmations that can assist with buttressing a story that might otherwise be lacking an element of objectivity.
+```{r, echo=FALSE}
+GA_tokenized %>%
+  anti_join(stop_words, by = "word") %>%
+  count(word) %>%
+  with(wordcloud(word, n, max.words = 100))
+```
+```{r, echo=FALSE}
+GA_counts <- GA_tokenized %>% 
+  count(filename, word) %>% 
+  group_by(filename) %>% 
+  mutate(total_words = n()) %>% 
+  ungroup()
+
+GA_tfidf <- GA_counts %>% 
+  bind_tf_idf(word, filename, n)
+```
+While we are able to see in the above figure a picture of a dynamic and multi-faceted culture, we still must wonder what might have weighted more heavily on the minds of the individuals we're exploring.  By taking a clearer slice of the narrative, we're able to reveal that, while things like family and religion were extremely valuable within slave culture, there were other things still that might have, quite reasonably, taken precedent.  The figure below captures an image of words more frequently employed within the GA_narratives subset.  If we ignore more common terms like "de", "dey", "dat", "wuz", etc., we can see that other terms fall higher on the number of times used; terms such as "slaves", "white", "plantation", and "marster".  This would seem to indicate that some of the things that might have left a larger imrpint on the minds of former slaves were the race and power dynamics they experienced as slaves.  Again, this is not particularly surprising as these types of things were extremely costly to the human beings who were enslaved -- often have consequences far beyond the time that slavery ended.
+
+```{r, echo=FALSE}
+GA_tokenized %>%
+  count(word, sort = TRUE) %>%
+  filter(n > 600) %>%
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(word, n)) +
+  geom_col() +
+  xlab(NULL) +
+  coord_flip()
+```
+
+When we subset the WPAnarratives to simply include the GA_narratives, we are able to view the story of slavery in the south a little more intimately.  By applying text analysis to the storie slaves told, we are unsurprisingly able to come up with a few ideas of how they shaped their culture and how their culture shaped them; a deep concern for family, religion, and freedom shows that the things that make us fundamentally human could not be quashed by the oppressive and unjust regime of antebellum slavery.  However, the high costs and devastating effects of slavery meant that the imprints left on former slaves minds would indicate a lasting and deep concern for the ugly race and power dynamics they experienced during their times as slaves.  
+
+Macro narratives such as this are only a first step in the direction of understanding the past lives of people.  Now that themes and ideas are able to be gleaned from taking a broad view of the language employed by former slaves, the next steps are to get down into the weeds of their lives and investigate insofar as it is possible the complex and nuianced lives that these individuals experienced.  For now, the work here has been done to lay the groundwork, and will serve as sufficient for the purposes of establishing a narrative with which future projects can run.
+
